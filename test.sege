@@ -1,0 +1,19 @@
+declare a # Make a appear first
+activate b
+a->b "Hello World"
+alt "Nice" {
+	b->c "Do this()"
+	deactivate b
+	note over b "Something"
+} else "Not nice" {
+	note left of a "Something else"
+}
+opt "text" {
+	c->a "Call me"
+}
+destroy a # Parsed but not implemented
+loop "while condition" {
+	b->d "some other text"
+}
+wait 2
+d->b "End"

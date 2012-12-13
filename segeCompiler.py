@@ -5,36 +5,38 @@ import cairo
 
 import segeParser as sp
 DASH_PATTERN = [6, 4]
-boring_style = { "font-face" : ("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL),
-          "font-size" : (10),
-          "line-spacing" : 1,
-          "text-color" : (0.0, 0.0, 0.0),
-          "background-color" : (1.0, 1.0, 1.0),
-          "line-width": 1,
-          "line-type": "regualr",
-          "wait-height" : 23,
-          "color": (0.0,0.0,0.0),
-          "activity-box-width" : 10,
-          "page.padding" : (0, 0, 5, 0),
-          "entity.padding": (5, 10, 23, 10),
-          "entity.margin": (5, 10, 5, 10),
-          "lifeline.line-type" : "dash",
-          "block.padding" : (5, 10, 5, 10),
-          "block.margin" : (5, 10, 5, 10),
-          "block.seperator-style" : "dash",
-          #"block.background-color" : (0.95, 0.95, 0.95),
-          "note.padding" : (10, 10, 10, 10),
-          "note.margin" : (10, 10, 10, 10),
-          "note.background-color" : (0.9, 0.9, 0.5),
-          "message.padding" : (5, 0, 5, 0),
-          "message.margin" : (0, 5, 0, 5),
-          "message.arrowhead-size" : (12.0, 12.0),
-          "message.arrowhead-fill-color": (0.0, 0.0, 0.0),
-          "message.call.arrowhead-type" : "filled",
-          "message.send.arrowhead-type" : "line",
-          "message.respond.arrowhead-type" : "line",
-          "message.respond.line-type" : "dash",
-        }
+boring_style = {"font-face": ("Sans",
+                              cairo.FONT_SLANT_NORMAL,
+                              cairo.FONT_WEIGHT_NORMAL),
+                "font-size": (10),
+                "line-spacing": 1,
+                "text-color": (0.0, 0.0, 0.0),
+                "background-color": (1.0, 1.0, 1.0),
+                "line-width": 1,
+                "line-type": "regualr",
+                "wait-height": 23,
+                "color": (0.0, 0.0, 0.0),
+                "activity-box-width": 10,
+                "page.padding": (0, 0, 5, 0),
+                "entity.padding": (5, 10, 23, 10),
+                "entity.margin": (5, 10, 5, 10),
+                "lifeline.line-type": "dash",
+                "block.padding": (5, 10, 5, 10),
+                "block.margin": (5, 10, 5, 10),
+                "block.seperator-style": "dash",
+                #"block.background-color" : (0.95, 0.95, 0.95),
+                "note.padding": (10, 10, 10, 10),
+                "note.margin": (10, 10, 10, 10),
+                "note.background-color": (0.9, 0.9, 0.5),
+                "message.padding": (5, 0, 5, 0),
+                "message.margin": (0, 5, 0, 5),
+                "message.arrowhead-size": (12.0, 12.0),
+                "message.arrowhead-fill-color": (0.0, 0.0, 0.0),
+                "message.call.arrowhead-type": "filled",
+                "message.send.arrowhead-type": "line",
+                "message.respond.arrowhead-type": "line",
+                "message.respond.line-type": "dash"}
+
 
 def compileSource(fname):
     with open(fname, "r") as f:
@@ -42,18 +44,20 @@ def compileSource(fname):
 
     return _SegeCompiler().compile(ast)
 
+
 class _SegeCompiler(object):
     def __init__(self):
         self.entities = OrderedDict()
         self.layers = [[], [], []]
         self._bottom = 0
+        self._extraRightPadding = 0
 
     def getStyle(self, *rawargs):
         selector = ".".join(rawargs)
         args = selector.split(".")
         for i in range(len(args)):
             try:
-                key = ".".join(args[:-(i+1)] + [args[-1]])
+                key = ".".join(args[:-(i + 1)] + [args[-1]])
                 #print "trying", key
                 return self._style[key]
             except KeyError:
@@ -77,24 +81,25 @@ class _SegeCompiler(object):
         self.ctx.set_font_size(self.getStyle(pfx, "font-size"))
         return self.ctx.font_extents()
 
-
     def getTotalSize(self):
         lastEnt = self.entities.keys()[-1]
         center = self.getEntityBoxLocation(lastEnt)
         width = self.getEntityBoxSize(lastEnt)[0]
-        totalWidth = center + (width / 2)
+        totalWidth = center + (width / 2) + self._extraRightPadding
         pb = self.getStyle("page.padding")[2]
         return totalWidth, self._bottom + pb
 
     def getTextSize(self, text, style):
         lines = text.splitlines()
-        ascent, descent, height, max_x_advance, max_y_advance = self.getFontExtents(style)
+        (ascent, descent, height,
+         max_x_advance, max_y_advance) = self.getFontExtents(style)
         totalHeight = 0
         totalWidth = 0
         for line in lines:
             if line.endswith("\n"):
                 line = line[:-1]
-            x_bearing, y_bearing, width, height, x_advance, y_advance = self.getTextExtents(line, style)
+            (x_bearing, y_bearing, width, height,
+             x_advance, y_advance) = self.getTextExtents(line, style)
             totalWidth = max(totalWidth, width)
             totalHeight -= y_bearing - descent
         lineSpaceing = self.getStyle(style, "line-spacing")
@@ -112,7 +117,8 @@ class _SegeCompiler(object):
         self._bottom = self.getHeaderHeight()
         self.processOperation(ast)
 
-        target = cairo.ImageSurface(cairo.FORMAT_RGB24, *[int(arg) for arg in self.getTotalSize()])
+        target = cairo.ImageSurface(cairo.FORMAT_RGB24,
+                                    *[int(arg) for arg in self.getTotalSize()])
         ctx = self.ctx = cairo.Context(target)
         ctx.set_source_rgb(*self.getStyle("page.background-color"))
         ctx.rectangle(0, 0, *self.getTotalSize())
@@ -143,13 +149,14 @@ class _SegeCompiler(object):
         center = self.getEntityBoxLocation(ent)
         height = self.getEntityBoxSize(ent)[1]
         pt, pr, pb, pl = self.getStyle("entity", "padding")
-        self.drawLine(center, height -pb , center, self._bottom, "lifeline")
+        self.drawLine(center, height - pb, center, self._bottom, "lifeline")
         actBoxWidth = self.getStyle("activity-box-width")
         for (actStart, actStop) in self.entities[ent]["activity"]:
-            if actStop == None:
+            if actStop is None:
                 actStop == self._bottom
             self.drawRectangle(center - actBoxWidth / 2, actStart,
                                actBoxWidth, actStop - actStart, "activity-box")
+
     def drawLine(self, x, y, x2, y2, stylePrefix):
         self.ctx.set_source_rgb(*self.getStyle(stylePrefix, "color"))
         self.ctx.set_line_width(self.getStyle(stylePrefix, "line-width"))
@@ -174,18 +181,24 @@ class _SegeCompiler(object):
         if myIndex == 0:
             pent = None
         else:
-            pent = ents[myIndex -1]
-        nent = ents[myIndex +1]
+            pent = ents[myIndex - 1]
         self.adjustLifeLineDistance(pent, op.entity, width / 2)
-        self.adjustLifeLineDistance(op.entity, nent, width / 2)
-        self.layers[1].append(partial(self.drawNote, self._bottom, op.entity, op.position, op.text))
+        try:
+            nent = ents[myIndex + 1]
+        except IndexError:
+            padding = (width / 2) - (self.getEntityBoxSize(pent)[0])
+            self._extraRightPadding = max(self._extraRightPadding, padding)
+        else:
+            self.adjustLifeLineDistance(op.entity, nent, width / 2)
+        self.layers[1].append(partial(self.drawNote, self._bottom, op.entity,
+                                      op.position, op.text))
         self._bottom += height
 
     def drawNote(self, top, entity, position, text):
         style = "note.%s" % position
         width, height = self.getBoxedTextSize(text, style)
         center = self.getEntityBoxLocation(entity)
-        self.drawBoxedText(center - width/2 , top, text, style)
+        self.drawBoxedText(center - width / 2, top, text, style)
 
     def processWait(self, op):
         self._bottom += self.getStyle("wait-height")
@@ -193,11 +206,13 @@ class _SegeCompiler(object):
     def processSetActivationState(self, op):
         for ent in op.entityList:
             activity = self.entities[ent]["activity"]
-            if op.activationState and (len(activity) == 0 or activity[-1][1] != None):
+            if (op.activationState and
+                    (len(activity) == 0 or activity[-1][1] is not None)):
                 activity.append([self._bottom, None])
                 self.entities[ent]["active"] = True
 
-            if not op.activationState and (len(activity) > 0 and activity[-1][1] == None):
+            if (not op.activationState and
+                    (len(activity) > 0 and activity[-1][1] is None)):
                 activity[-1][1] = self._bottom
                 self.entities[ent]["active"] = False
 
@@ -220,11 +235,9 @@ class _SegeCompiler(object):
             offset = self.getEntityBoxSize(prevEnt)[0] / 2
         offset += self.getEntityBoxSize(op.entity)[0] / 2
 
-        self.entities[op.entity] = {
-                "locationConstraint" : (prevEnt, offset),
-                "active" : False,
-                "activity" : []
-                }
+        self.entities[op.entity] = {"locationConstraint": (prevEnt, offset),
+                                    "active": False,
+                                    "activity": []}
 
     def getEntityBoxLocation(self, ent):
         relEnt, offset = self.entities[ent]["locationConstraint"]
@@ -234,7 +247,7 @@ class _SegeCompiler(object):
             return offset + self.getEntityBoxLocation(relEnt)
 
     def adjustLifeLineDistance(self, entA, entB, width):
-        if entA == None:
+        if entA is None:
             lifelineA = 0
         else:
             lifelineA = self.getEntityBoxLocation(entA)
@@ -253,7 +266,8 @@ class _SegeCompiler(object):
         style = "block.alt"
         totalWidth = 0
         for condition in alt.conditions:
-            width, height = self.getBlockMinSize("alt", condition.condition, style)
+            width, height = self.getBlockMinSize("alt", condition.condition,
+                                                 style)
             totalWidth = max(totalWidth, width)
 
         self.adjustLifeLineDistance(None, self.entities.keys()[0], totalWidth)
@@ -267,7 +281,9 @@ class _SegeCompiler(object):
         height = self.getBlockMinSize("alt", firstOp.condition, style)[1]
         self._bottom = max(self._bottom, top + height)
         for op in alt.conditions[1:]:
-            self.layers[2].append(partial(self.drawBlockSeperator, self._bottom, "[%s]" % op.condition, style))
+            self.layers[2].append(partial(self.drawBlockSeperator,
+                                          self._bottom,
+                                          "[%s]" % op.condition, style))
             mytop = self._bottom
             self._bottom += pt + mt
             self.processOperation(op.sequence)
@@ -276,8 +292,14 @@ class _SegeCompiler(object):
         self._bottom += pb + mb
         bottom = self._bottom
 
-        self.layers[0].append(partial(self.drawBlockBackground, top, bottom, style))
-        self.layers[2].append(partial(self.drawBlockFrame, top, bottom, "alt", "[%s]" % alt.conditions[0].condition, style))
+        self.layers[0].append(partial(self.drawBlockBackground, top, bottom,
+                                      style))
+        self.layers[2].append(partial(self.drawBlockFrame,
+                                      top,
+                                      bottom,
+                                      "alt",
+                                      "[%s]" % alt.conditions[0].condition,
+                                      style))
 
     def getBlockSeperatorHeight(self, text, style):
         mt, mr, mb, ml = self.getStyle(style, "margin")
@@ -309,7 +331,8 @@ class _SegeCompiler(object):
     def processMessage(self, msg):
         srcActive = self.entities[msg.src]["active"]
         dstActive = self.entities[msg.dst]["active"]
-        self.layers[1].append(partial(self.drawMessage, msg, self._bottom, srcActive, dstActive))
+        self.layers[1].append(partial(self.drawMessage, msg, self._bottom,
+                                      srcActive, dstActive))
 
         width, height = self.getMessageBoxSize(msg)
         self._bottom += height
@@ -327,8 +350,10 @@ class _SegeCompiler(object):
         self._bottom += pb + mb
         self._bottom = bottom = max(self._bottom, top + height)
 
-        self.layers[0].append(partial(self.drawBlockBackground, top, bottom, style))
-        self.layers[2].append(partial(self.drawBlockFrame, top, bottom, title, text, style))
+        self.layers[0].append(partial(self.drawBlockBackground, top, bottom,
+                                      style))
+        self.layers[2].append(partial(self.drawBlockFrame, top, bottom, title,
+                                      text, style))
 
     def drawBlockBackground(self, top, bottom, style):
         ppt, ppr, ppb, ppl = self.getStyle("page", "padding")
@@ -356,12 +381,15 @@ class _SegeCompiler(object):
         self.ctx.stroke()
 
         self.drawText(ppl + pl + ml, top + pt + mt, title, style)
-        self.drawText(ppl + pl + ml, top + pt + mt + titleHeight + mb + mt, text, style)
+        self.drawText(ppl + pl + ml, top + pt + mt + titleHeight + mb + mt,
+                      text, style)
 
         self.ctx.set_source_rgb(*self.getStyle(style, "color"))
         self.ctx.move_to(ppl + pl, top + pt + mt + titleHeight + mb)
-        self.ctx.line_to(ppl + pl + mr + titleWidth, top + pt + mt + titleHeight + mb)
-        self.ctx.line_to(ppl + pl + mr + titleWidth + ml, top + pt + mt + titleHeight)
+        self.ctx.line_to(ppl + pl + mr + titleWidth, top + pt + mt +
+                         titleHeight + mb)
+        self.ctx.line_to(ppl + pl + mr + titleWidth + ml, top + pt + mt +
+                         titleHeight)
         self.ctx.line_to(ppl + pl + mr + titleWidth + ml, top + pt)
         self.ctx.stroke()
 
@@ -411,12 +439,12 @@ class _SegeCompiler(object):
         else:
             textLoc = srcLoc - textWidth - mr
 
-
         self.ctx.set_source_rgb(*self.getStyle(style, "background-color"))
         self.ctx.rectangle(textLoc, top, textWidth, textHeight)
         self.ctx.fill()
 
-        self.drawLine(srcLoc, top + textHeight + mb + mt, dstLoc, top + textHeight + mb + mt, style)
+        self.drawLine(srcLoc, top + textHeight + mb + mt, dstLoc, top +
+                      textHeight + mb + mt, style)
         self.drawText(textLoc, top, msg.text, style)
         self.drawArrowHead(bearing, dstLoc, top + textHeight, style)
 
@@ -435,7 +463,8 @@ class _SegeCompiler(object):
         self.ctx.stroke()
 
         if ahType == "filled":
-            self.ctx.set_source_rgb(*self.getStyle(pfx, "arrowhead-fill-color"))
+            self.ctx.set_source_rgb(*self.getStyle(pfx,
+                                                   "arrowhead-fill-color"))
             self.ctx.move_to(x - (width * bearing), y - (height / 2))
             self.ctx.line_to(x, y)
             self.ctx.line_to(x - (width * bearing), y + (height / 2))
@@ -453,20 +482,21 @@ class _SegeCompiler(object):
         self.ctx.select_font_face(*self.getStyle(pfx, "font-face"))
         self.ctx.set_font_size(self.getStyle(pfx, "font-size"))
         lineSpaceing = self.getStyle(pfx, "line-spacing")
-        ascent, descent, height, max_x_advance, max_y_advance = self.getFontExtents(pfx)
+        (ascent, descent, height,
+         max_x_advance, max_y_advance) = self.getFontExtents(pfx)
         #w, h = self.getTextSize(text, pfx)
         #self.ctx.rectangle(x, y, w, h)
         #self.ctx.stroke()
         for line in text.splitlines():
             #TODO : hanle tabs
             line = line.strip()
-            x_bearing, y_bearing, width, height, x_advance, y_advance = self.getTextExtents(line, pfx)
+            (x_bearing, y_bearing, width, height,
+             x_advance, y_advance) = self.getTextExtents(line, pfx)
             #x -= x_bearing
             y -= y_bearing
             self.ctx.move_to(x, y)
             self.ctx.show_text(line)
             y += descent + lineSpaceing
-
 
     def drawRectangle(self, x, y, width, height, stylePrefix):
         pfx = stylePrefix
@@ -480,10 +510,11 @@ class _SegeCompiler(object):
 
     def drawBoxedText(self, x, y, text, stylePrefix):
         pfx = stylePrefix
-        textWidth, textHeight =  self.getTextSize(text, pfx)
+        textWidth, textHeight = self.getTextSize(text, pfx)
 
         pt, pr, pb, pl = self.getStyle(pfx, "padding")
-        margin_top, margin_right, margin_bottom, margin_left = self.getStyle(pfx, "margin")
+        (margin_top, margin_right,
+         margin_bottom, margin_left) = self.getStyle(pfx, "margin")
         rectWidth = margin_right + margin_left + textWidth
         rectHeight = margin_top + margin_bottom + textHeight
         self.drawRectangle(x + pl, y + pt, rectWidth, rectHeight, pfx)
@@ -491,4 +522,3 @@ class _SegeCompiler(object):
         self.drawText(x + pl + margin_left, y + pt + margin_top, text, pfx)
 
         return (rectWidth, rectHeight)
-
